@@ -1,41 +1,37 @@
-// server/api/lead/[id]/index.get.ts
-import { requireAuth } from '../../../utils/auth';
-import { db } from '../../../db/client';
-import { createError } from 'h3';
+// app/server/api/leads/[id]/index.get.ts
+import { requireAuth } from '../../../utils/auth'
+import { db } from '../../../db/client'
+import { createError, defineEventHandler, getRouterParam } from 'h3'
 
 export default defineEventHandler(async (event) => {
-  const userId = await requireAuth(event);
+  const userId = await requireAuth(event)
 
-  // 1. leer id de la ruta
-  const id = getRouterParam(event, 'id');
-  if (!id || Number.isNaN(Number(id))) {
+  // 1. Leer ID de la ruta
+  const id = getRouterParam(event, 'id')
+  if (!id) {
     throw createError({
       statusCode: 400,
-      statusMessage: 'ID inválido',
-    });
+      message: 'ID is required',
+    })
   }
 
-  // 2. consultar
+  // 2. Consultar lead
   const { rows } = await db.execute({
-    sql: `
-      SELECT id, full_name, status, created_at
-      FROM leads
-      WHERE id = ?
-        AND user_id = ?
-        AND deleted_at IS NULL
-      LIMIT 1
-    `,
-    args: [Number(id), userId],
-  });
+    sql: `SELECT id, full_name, status, created_at
+          FROM leads
+          WHERE id = ? AND user_id = ? AND deleted_at IS NULL
+          LIMIT 1`,
+    args: [id, userId],
+  })
 
-  // 3. si no existe
+  // 3. Si no existe
   if (!rows.length) {
     throw createError({
       statusCode: 404,
-      statusMessage: 'Lead no encontrado',
-    });
+      message: 'Lead not found',
+    })
   }
 
-  // 4. devolver el único registro
-  return rows[0];
-});
+  // 4. Devolver el único registro
+  return rows[0]
+})

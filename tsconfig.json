@@ -55,7 +55,12 @@
   ,  "include": [
     "nuxt.config.ts",
     "server/**/*.ts",
-    "app/server/types" 
+    "app/server/types",
+    "types/**/*",
+    "app/**/*",
+    "server/**/*",
+    "test/**/*",
+    "scripts/**/*"
   ]
 
 }

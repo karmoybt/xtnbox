@@ -1,61 +1,85 @@
-<!-- pages/auth/UserRegister.vue -->
 <template>
-  <div>
-    <h1>Registro</h1>
-    <form @submit.prevent="register">
-      <input v-model="email" placeholder="Email" type="email" required>
-      <input v-model="name"  placeholder="Nombre" required>
-      <button type="submit">Registrarse con Passkey</button>
-    </form>
-  </div>
+  <form @submit.prevent="register">
+    <input v-model="email" placeholder="Email">
+    <input v-model="name" placeholder="Name" >
+    <button type="submit">Registrarse</button>
+  </form>
 </template>
-
 <script setup lang="ts">
+import { ref } from 'vue'
+import { navigateTo } from 'nuxt/app'
+
 interface RegisterChallenge {
-  challenge: string;
+  challenge: string
+}
+
+interface CredentialJSON {
+  id: string
+  rawId: number[]
+  response: {
+    attestationObject: number[]
+    clientDataJSON: number[]
+    transports?: string[]
+  }
+  type: 'public-key'
 }
 
 const email = ref('')
-const name  = ref('')
+const name = ref('')
 
-async function register () {
-  const { challenge } = await $fetch<RegisterChallenge>('/api/auth/register', {
-    method: 'POST',
-    body: { email: email.value, name: name.value },
-  })
+async function register() {
+  try {
+    // Paso 1: Solicitar desafío
+    const { challenge } = await $fetch<RegisterChallenge>('/api/auth/register', {
+      method: 'POST',
+      body: { email: email.value, name: name.value }
+    })
 
-  const publicKeyCredential = await navigator.credentials.create({
-    publicKey: {
-      challenge: Uint8Array.from(atob(challenge), c => c.charCodeAt(0)),
-      rp:         { name: 'CristinaCRM', id: 'localhost' },
-      user:       {
-        id:   Uint8Array.from(email.value, c => c.charCodeAt(0)),
-        name: email.value,
-        displayName: name.value,
-      },
-      pubKeyCredParams: [{ alg: -7, type: 'public-key' }],
-      timeout: 60000,
-      attestation: 'none',
-    },
-  }) as PublicKeyCredential | null
+    // Paso 2: Crear credencial Passkey
+    const credential = await navigator.credentials.create({
+      publicKey: {
+        rp: { name: 'CristinaCRM', id: 'localhost' },
+        user: {
+          id: new TextEncoder().encode(email.value),
+          name: email.value,
+          displayName: name.value
+        },
+        challenge: Uint8Array.from(atob(challenge), c => c.charCodeAt(0)),
+        pubKeyCredParams: [{ type: 'public-key', alg: -7 }],
+        timeout: 60000,
+        attestation: 'none'
+      }
+    }) as PublicKeyCredential
 
-  if (!publicKeyCredential) {
-    throw new Error('Could not create credential')
+    // Paso 3: Convertir y enviar verificación
+    const credJson = publicKeyCredentialToJSON(credential)
+    const verification = await $fetch<{ success: boolean; user: { id: string; email: string } }>('/api/auth/register/verify', {
+      method: 'POST',
+      body: { email: email.value, credential: credJson }
+    })
+
+    if (verification.success) {
+      await navigateTo('/')
+    }
+  } catch (err) {
+    console.error('Registro fallido:', err)
+    alert('Error durante el registro')
   }
+}
 
-  const verification = await $fetch('/api/auth/register/verify', {
-    method: 'POST',
-    body: {
-      email: email.value,
-      credential: {
-        id:        publicKeyCredential.id,
-        rawId:     btoa(String.fromCharCode(...new Uint8Array(publicKeyCredential.rawId))),
-        response:  publicKeyCredential.response,
-        type:      publicKeyCredential.type,
-      },
-    },
-  })
-
-  if (verification.success) await navigateTo('/dashboard')
+function publicKeyCredentialToJSON(cred: PublicKeyCredential): CredentialJSON {
+  const { type, id } = cred as { type: 'public-key'; id: string }
+  const response = cred.response as AuthenticatorAttestationResponse
+  return {
+    type,
+    id,
+    rawId: Array.from(new Uint8Array(cred.rawId)),
+    response: {
+      attestationObject: Array.from(new Uint8Array(response.attestationObject)),
+      clientDataJSON: Array.from(new Uint8Array(response.clientDataJSON)),
+      transports: response.getTransports?.() || []
+    }
+  }
 }
 </script>
+

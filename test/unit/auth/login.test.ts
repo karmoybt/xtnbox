@@ -8,7 +8,7 @@ vi.mock('../../../app/server/db/client', () => ({
   db: { execute: vi.fn() }
 }))
 vi.mock('../../../app/server/redis/client', () => ({
-  redis: { setex: vi.fn() }
+  redis: { setEx: vi.fn() } // ✅ CORREGIDO: setEx (no setex)
 }))
 
 /* ---------- imports de los mocks ---------- */
@@ -23,7 +23,7 @@ interface LoginResponse {
 /* ---------- helpers ---------- */
 function fakeRow(overrides: Record<string, unknown> = {}): Row {
   return {
-    length: 0,               // obligatoria en Row
+    length: 0,
     ...overrides,
   } as Row
 }
@@ -47,7 +47,7 @@ describe('POST /api/auth/login', () => {
 
   it('returns auth options for existing user', async () => {
     vi.mocked(db.execute).mockResolvedValueOnce(fakeResultSet([fakeRow({ id: 'usr_abc123' })]))
-    vi.mocked(redis.setex).mockResolvedValueOnce('OK')
+    vi.mocked(redis.setEx).mockResolvedValueOnce('OK') 
 
     const res = await $fetch<LoginResponse>('/api/auth/login', {
       method: 'POST',
@@ -55,7 +55,7 @@ describe('POST /api/auth/login', () => {
     })
 
     expect(res.options).toBeDefined()
-    expect(redis.setex).toHaveBeenCalledWith(
+    expect(redis.setEx).toHaveBeenCalledWith( 
       'auth_challenge:usr_abc123',
       60,
       expect.any(String)

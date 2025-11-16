@@ -1,21 +1,23 @@
-// server/middleware/rate-limit.ts
-import { redis } from '../redis/client';
-import { getLogger } from '../audit/logger';
-import { createError } from 'h3';
+import { redis } from '../redis/client'
+import { getLogger } from '../audit/logger'
+import { defineEventHandler, createError } from 'h3'
 
 export default defineEventHandler(async (event) => {
-  const ip = (event.context.ip as string) || 'unknown';
+  // Solo aplicar a rutas de API
+  if (!event.path.startsWith('/api/')) return
 
-  // Saltar en desarrollo
-  if (process.env.NODE_ENV === 'development') return;
+  if (process.env.NODE_ENV === 'development') return
 
-  const key = `ratelimit:${ip}`;
-  const current = await redis.incr(key);
+  const ip = (event.context.ip as string) || 'unknown'
+  const key = `ratelimit:${ip}`
+  const current = await redis.incr(key)
 
-  if (current === 1) await redis.expire(key, 60); // 1 minuto
+  if (current === 1) {
+    await redis.expire(key, 60)
+  }
 
   if (current > 100) {
-    getLogger('RATE_LIMIT_EXCEEDED', { ip_address: ip, count: current });
-    throw createError({ statusCode: 429, message: 'Too many requests' });
+    getLogger('RATE_LIMIT_EXCEEDED', { ip_address: ip, count: current })
+    throw createError({ statusCode: 429, message: 'Too many requests' })
   }
-});
+})

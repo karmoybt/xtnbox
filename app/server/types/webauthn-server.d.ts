@@ -1,3 +1,4 @@
+// types/webauthn-server.d.ts
 declare module 'webauthn-server' {
   export interface RegistrationOptions {
     rpName: string;
