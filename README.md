@@ -1,6 +1,4 @@
-Claro, aquí tienes todo el contenido en **una sola etiqueta markdown (` ```md ... ``` `)** para que puedas guardarlo directamente como un archivo `.md`:
 
-```md
 # CristinaCRM 🧪
 
 CRM minimalista con **autenticación por Passkeys** (WebAuthn), backend en **Nuxt 4**, base de datos **Turso (SQLite)** y **Redis** para cache / rate-limit.  
@@ -111,4 +109,3 @@ Todos los eventos críticos se escriben en `logs/audit.log` (rotación externa r
 ## Licencia
 
 MIT — úsalo para lo que quieras.
-```
