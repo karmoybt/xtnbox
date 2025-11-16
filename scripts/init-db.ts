@@ -1,9 +1,14 @@
 // scripts/init-db.ts
-import { readFile } from 'fs/promises';
+import { mkdir, readFile } from 'node:fs/promises';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { db } from '../app/server/db/client';
 
 async function initDb() {
-  const schema = await readFile(new URL('../db/schema.sql', import.meta.url), 'utf-8');
+  const dbDir = join(fileURLToPath(new URL('.', import.meta.url)), '..', 'db');
+  await mkdir(dbDir, { recursive: true });
+
+  const schema = await readFile(join(dbDir, 'schema.sql'), 'utf-8');
   const statements = schema
     .split(';')
     .map(s => s.trim())
@@ -12,7 +17,6 @@ async function initDb() {
   for (const stmt of statements) {
     await db.execute(stmt);
   }
-
   console.log('✅ Base de datos inicializada');
 }
 

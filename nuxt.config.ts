@@ -8,11 +8,16 @@ export default defineNuxtConfig({
   nitro: {
     experimental: { database: true },
   },
+  routeRules: {
+      '/api/auth/**': { cors: true },
+      '/api/**': { middleware: ['trace-id', 'rate-limit'] }, // todos los APIs
+    },
   hooks: {
     'nitro:config'(config) {
       config.routeRules = {
         '/api/**': { cors: true },
       }
+      
     },
   },
 })

@@ -42,10 +42,16 @@ export default defineEventHandler(async (event) => {
   const body = await readValidatedBody(event, verifySchema.parse);
   const { email, credential } = body;
 
+  const expectedChallenge = 'STATIC_CHALLENGE_PLACEHOLDER'; // ← cámbialo en prod
+
   if (!isCredJSON(credential))
     throw createError({ statusCode: 400, message: 'Malformed credential' });
-
-  const expectedChallenge = 'STATIC_CHALLENGE_PLACEHOLDER'; // ← cámbialo en prod
+  const challengeKey = `reg_challenge:${email}`;
+  const expectedChallenge = await redis.get(challengeKey);
+  if (!expectedChallenge) {
+    throw createError({ statusCode: 400, message: 'Registration challenge expired' });
+  }
+  
 
   try {
     /* 1.  Conversión a formato que entiende la librería */

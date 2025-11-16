@@ -34,6 +34,10 @@ export default defineEventHandler(async (event) => {
     timeout: 60000,
     attestationType: 'none',
   });
+  const challengeKey = `reg_challenge:${email}`;
+  await redis.setEx(challengeKey, 60, challenge.challenge);
+
+  return { challenge: challenge.challenge };
 
   getLogger('USER_REGISTRATION_STARTED', {
     email,
